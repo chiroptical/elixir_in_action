@@ -62,3 +62,42 @@ defmodule Chapter4.TodoList do
     end
   end
 end
+
+defimpl String.Chars, for: TodoList do
+  def to_string(_) do
+    "#TodoList"
+  end
+end
+
+defimpl Collectable, for: TodoList do
+  alias Chapter4.TodoList
+
+  def into(original) do
+    {original, &into_callback/2}
+  end
+
+  defp into_callback(todo_list, {:cont, entry}) do
+    TodoList.add_entry(todo_list, entry)
+  end
+
+  defp into_callback(todo_list, :done), do: todo_list
+  defp into_callback(_todo_list, :halt), do: :ok
+end
+
+defmodule Chapter4.TodoList.CsvImporter do
+  alias Chapter4.TodoList
+  alias Chapter4.TodoEntry
+  @spec import(Path.t()) :: TodoList.t()
+  def import(filename) do
+    File.stream!(filename)
+    |> Stream.map(fn line ->
+      [date_string, title] =
+        String.trim_trailing(line)
+        |> String.split(",")
+
+      date = Date.from_iso8601!(date_string)
+      %TodoEntry{date: date, title: title}
+    end)
+    |> TodoList.new()
+  end
+end
